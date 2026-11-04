@@ -1,0 +1,446 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Study Quiz Maker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: two desks side by side — your material on the left, the quiz sheet on the right; stacks on phones. */
+:root{
+  --bg:#E9EDF2; --surface:#FFFFFF; --sunk:#F3F5F8; --ink:#18202B; --muted:#5B6676; --line:#D3D9E2;
+  --primary:#2945C9; --on-primary:#FFFFFF; --hl:#F6E45A; --hl-ink:#18202B;
+  --good:#1D7A4A; --good-bg:#E2F3E9; --bad:#B3261E; --bad-bg:#FBE6E4;
+  --f-display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-body:"IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#10141A; --surface:#181E27; --sunk:#131820; --ink:#E5E9EF; --muted:#9AA5B4; --line:#2B3442;
+  --primary:#8BA2FF; --on-primary:#0E1530; --hl:#D9C93E; --hl-ink:#14181E;
+  --good:#6FD39C; --good-bg:#16301F; --bad:#FF8F86; --bad-bg:#3A1A18; color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#10141A; --surface:#181E27; --sunk:#131820; --ink:#E5E9EF; --muted:#9AA5B4; --line:#2B3442;
+  --primary:#8BA2FF; --on-primary:#0E1530; --hl:#D9C93E; --hl-ink:#14181E;
+  --good:#6FD39C; --good-bg:#16301F; --bad:#FF8F86; --bad-bg:#3A1A18; color-scheme:dark }
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.55;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 48px}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:22px}
+header h1{font-family:var(--f-display);font-weight:800;font-size:clamp(28px,4.4vw,44px);line-height:1.05;margin:0;letter-spacing:-.01em;text-wrap:balance}
+header h1 mark{background:linear-gradient(transparent 55%,var(--hl) 55%,var(--hl) 92%,transparent 92%);color:inherit;padding:0 .08em}
+header p{margin:8px 0 0;color:var(--muted);max-width:62ch}
+.grid{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:22px;align-items:start}
+@media (max-width:860px){.grid{grid-template-columns:minmax(0,1fr)}}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:20px;display:flex;flex-direction:column;gap:16px;min-width:0}
+.label{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+h2{font-family:var(--f-display);font-weight:600;font-size:21px;margin:0;line-height:1.2}
+.drop{border:1.5px dashed var(--line);border-radius:var(--r);padding:18px;text-align:center;background:var(--sunk);cursor:pointer;transition:border-color .15s,background .15s}
+.drop:hover,.drop.over,.drop:focus-visible{border-color:var(--primary);outline:none}
+.drop strong{color:var(--primary)}
+.drop small{display:block;color:var(--muted);margin-top:4px}
+.files{display:flex;flex-wrap:wrap;gap:8px}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:13px;background:var(--sunk);border:1px solid var(--line);border-radius:999px;padding:3px 6px 3px 10px;max-width:100%}
+.chip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chip button{border:0;background:none;color:var(--muted);cursor:pointer;font-size:15px;line-height:1;padding:2px 4px;border-radius:50%}
+.chip button:hover{color:var(--bad)}
+textarea{width:100%;min-height:210px;resize:vertical;font:inherit;font-size:14px;color:var(--ink);background:var(--sunk);border:1px solid var(--line);border-radius:var(--r);padding:12px}
+textarea:focus,select:focus{outline:2px solid var(--primary);outline-offset:1px}
+.meta{display:flex;justify-content:space-between;gap:8px;font-size:12.5px;color:var(--muted);font-family:var(--f-mono)}
+.settings{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+@media (max-width:420px){.settings{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
+.field{display:flex;flex-direction:column;gap:4px;min-width:0}
+select{font:inherit;font-size:14px;color:var(--ink);background:var(--sunk);border:1px solid var(--line);border-radius:8px;padding:8px}
+.btn{font:inherit;font-weight:600;border-radius:8px;padding:11px 16px;cursor:pointer;border:1px solid transparent;transition:transform .08s,filter .15s}
+.btn:active{transform:translateY(1px)}
+.btn:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+.btn.primary{background:var(--primary);color:var(--on-primary)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.ghost{background:transparent;border-color:var(--line);color:var(--ink)}
+.btn.ghost:hover{border-color:var(--primary)}
+.btn[disabled]{opacity:.5;cursor:not-allowed}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.status{font-size:13.5px;color:var(--muted);min-height:1.4em}
+.status.err{color:var(--bad)}
+.notice{font-size:13.5px;background:var(--sunk);border:1px solid var(--line);border-radius:8px;padding:10px 12px;color:var(--muted)}
+
+/* quiz sheet */
+.qhead{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+.tag{font-size:12px;font-weight:600;background:var(--hl);color:var(--hl-ink);border-radius:4px;padding:2px 7px}
+.progress{height:4px;background:var(--sunk);border-radius:4px;overflow:hidden}
+.progress i{display:block;height:100%;background:var(--primary);transition:width .25s}
+.counter{font-family:var(--f-mono);font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.qtext{font-family:var(--f-display);font-weight:600;font-size:clamp(19px,2.3vw,23px);line-height:1.3;margin:0;text-wrap:pretty}
+.opts{display:flex;flex-direction:column;gap:9px}
+.opt{display:flex;gap:12px;align-items:flex-start;text-align:left;width:100%;font:inherit;color:var(--ink);background:var(--surface);border:1.5px solid var(--line);border-radius:9px;padding:11px 13px;cursor:pointer;transition:border-color .12s,background .12s}
+.opt:hover:not([disabled]){border-color:var(--primary)}
+.opt:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+.opt .k{flex:none;width:26px;height:26px;border-radius:6px;display:grid;place-items:center;font-family:var(--f-mono);font-size:13px;background:var(--sunk);border:1px solid var(--line)}
+.opt .t{min-width:0;padding-top:1px}
+.opt[disabled]{cursor:default}
+.opt.right{border-color:var(--good);background:var(--good-bg)}
+.opt.right .k{background:var(--good);color:var(--surface);border-color:var(--good)}
+.opt.wrong{border-color:var(--bad);background:var(--bad-bg)}
+.opt.wrong .k{background:var(--bad);color:var(--surface);border-color:var(--bad)}
+.explain{border-left:3px solid var(--hl);padding:4px 0 4px 14px;display:flex;flex-direction:column;gap:6px}
+.explain .verdict{font-weight:600}
+.explain .verdict.good{color:var(--good)} .explain .verdict.bad{color:var(--bad)}
+.explain blockquote{margin:0;font-size:13.5px;color:var(--muted);font-style:italic}
+.score{display:flex;gap:18px;align-items:center;flex-wrap:wrap}
+.big{font-family:var(--f-display);font-weight:800;font-size:64px;line-height:1;font-variant-numeric:tabular-nums}
+.review{display:flex;flex-direction:column;gap:12px;margin:0;padding:0;list-style:none}
+.review li{border-top:1px solid var(--line);padding-top:12px;display:flex;flex-direction:column;gap:4px;font-size:14px}
+.review .q{font-weight:600}
+.review .a{color:var(--good)} .review .y{color:var(--bad)}
+.empty{color:var(--muted);text-align:center;padding:40px 10px}
+.spinner{width:18px;height:18px;border:2.5px solid var(--line);border-top-color:var(--primary);border-radius:50%;animation:spin .8s linear infinite;flex:none}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation-duration:2s!important}}
+.kbd{font-size:12px;color:var(--muted)}
+</style>
+<script src="https://js.puter.com/v2/"></script>
+</head><body>
+
+<div class="wrap">
+  <header>
+    <h1>Turn your notes into a <mark>fresh quiz</mark></h1>
+    <p>Upload or paste your study material. Claude writes new questions from it each time you click, skipping ones you've already seen.</p>
+  </header>
+
+  <div class="grid">
+    <section class="panel" aria-labelledby="mat-h">
+      <h2 id="mat-h">Your material</h2>
+      <div class="drop" id="drop" tabindex="0" role="button" aria-label="Upload study files">
+        <div><strong>Choose files</strong> or drop them here</div>
+        <small>PDF, Word (.docx), .txt, .md or .csv</small>
+        <input type="file" id="file" multiple accept=".pdf,.docx,.txt,.md,.markdown,.csv,.html,.htm,text/*" hidden>
+      </div>
+      <div class="files" id="files"></div>
+      <div class="field">
+        <label class="label" for="material">Text Claude will quiz you on</label>
+        <textarea id="material" spellcheck="false"></textarea>
+        <div class="meta"><span id="wc">0 words</span><button class="btn ghost" id="clear" style="padding:2px 8px;font-size:12px">Clear</button></div>
+      </div>
+      <div class="settings">
+        <div class="field"><label class="label" for="count">Questions</label>
+          <select id="count"><option>5</option><option selected>10</option><option>15</option><option>20</option></select></div>
+        <div class="field"><label class="label" for="kind">Type</label>
+          <select id="kind"><option value="mixed">Mixed</option><option value="mc">Multiple choice</option><option value="tf">True / false</option></select></div>
+        <div class="field"><label class="label" for="level">Difficulty</label>
+          <select id="level"><option value="intro">University intro</option><option value="upper">University advanced</option><option value="exam" selected>Final exam (hardest)</option></select></div>
+      </div>
+      <div class="row">
+        <button class="btn primary" id="gen">Generate quiz</button>
+        <button class="btn ghost" id="stop" hidden>Stop</button>
+      </div>
+      <div class="status" id="status" role="status"></div>
+      <div class="notice" id="noai">Questions are written by Claude through Puter, a free service. The first time you generate, a window asks you to sign in or create a free Puter account. Allow pop-ups for this page if nothing appears.</div>
+    </section>
+
+    <section class="panel" id="sheet" aria-live="polite"></section>
+  </div>
+</div>
+
+<script>
+(() => {
+const $ = id => document.getElementById(id);
+const SAMPLE_NOTES = `Cellular respiration (Bio 101 — sample notes)
+
+Cellular respiration converts glucose into ATP, the cell's energy currency. Overall: C6H12O6 + 6 O2 → 6 CO2 + 6 H2O + ATP.
+
+1. Glycolysis happens in the cytoplasm. One glucose is split into two pyruvate molecules, giving a net gain of 2 ATP and 2 NADH. It does not need oxygen.
+
+2. The Krebs (citric acid) cycle takes place in the mitochondrial matrix. Pyruvate is first converted to acetyl-CoA, releasing CO2. Each turn of the cycle produces NADH, FADH2 and 1 ATP (or GTP).
+
+3. The electron transport chain sits on the inner mitochondrial membrane. NADH and FADH2 donate electrons; their energy pumps protons (H+) into the intermembrane space. Protons flow back through ATP synthase, making most of the ATP (about 26–28 of ~30–32 total). Oxygen is the final electron acceptor and forms water.
+
+Without oxygen, cells use fermentation to regenerate NAD+: muscle cells make lactic acid, yeast make ethanol and CO2. Fermentation yields only the 2 ATP from glycolysis.`;
+
+const EXAMPLE = {
+  title: "Cellular respiration", example: true,
+  questions: [
+    {type:"mc", prompt:"Where in the cell does glycolysis take place?", options:["Mitochondrial matrix","Cytoplasm","Inner mitochondrial membrane","Nucleus"], answer:1,
+     explanation:"Glycolysis runs in the cytoplasm and doesn't require oxygen, so it happens before anything enters the mitochondria.", source:"Glycolysis happens in the cytoplasm."},
+    {type:"tf", prompt:"Oxygen acts as the final electron acceptor in the electron transport chain.", options:["True","False"], answer:0,
+     explanation:"At the end of the chain, oxygen accepts electrons and combines with protons to form water.", source:"Oxygen is the final electron acceptor and forms water."},
+    {type:"mc", prompt:"Which stage produces most of the cell's ATP?", options:["Glycolysis","Fermentation","Krebs cycle","Electron transport chain with ATP synthase"], answer:3,
+     explanation:"Proton flow through ATP synthase generates roughly 26–28 of the ~30–32 ATP per glucose.", source:"Protons flow back through ATP synthase, making most of the ATP."}
+  ]
+};
+
+let files = [];          // {name, text}
+let quiz = EXAMPLE, idx = 0, picks = [];
+let asked = [];          // prompts already shown, to avoid repeats
+let ctl = null, runId = 0;
+// Claude models offered through Puter, strongest first; falls back if one isn't available.
+const MODELS = ["claude-opus-4-8", "claude-sonnet-5", "claude-sonnet-4-6"];
+function replyText(r){
+  if (typeof r === "string") return r;
+  const c = r?.message?.content;
+  if (typeof c === "string") return c;
+  if (Array.isArray(c)) return c.map(p => p?.text ?? "").join("");
+  return r?.text ?? String(r ?? "");
+}
+function parseJSON(t){
+  try { return JSON.parse(t); } catch(e){}
+  const fence = t.match(/```(?:json)?\s*([\s\S]*?)```/); if (fence){ try { return JSON.parse(fence[1]); } catch(e){} }
+  const a = t.indexOf("{"), b = t.lastIndexOf("}");
+  if (a >= 0 && b > a){ try { return JSON.parse(t.slice(a, b+1)); } catch(e){} }
+  throw {code:"invalid_json"};
+}
+async function askClaude(prompt, count){
+  let lastErr;
+  for (const model of MODELS){
+    const w = $("work"); if (w) w.textContent = `Writing ${count} hard questions… this can take a minute`;
+    try {
+      const r = await puter.ai.chat(prompt, { model });
+      return parseJSON(replyText(r));
+    } catch(e){
+      if (e?.code === "invalid_json") throw e;
+      lastErr = e;
+      const msg = String(e?.message || e?.error?.message || e?.error || e || "").toLowerCase();
+      if (/sign.?in|auth|popup|denied|cancel/.test(msg)) throw {code:"auth"};
+      if (/credit|quota|limit|insufficient|funds|usage/.test(msg)) throw {code:"rate_limited"};
+    }
+  }
+  throw lastErr || {code:"upstream_error"};
+}
+
+/* ---------- material ---------- */
+const ta = $("material");
+let saved = null;
+try { saved = localStorage.getItem("qm-material"); } catch(e){}
+ta.value = saved ?? SAMPLE_NOTES;
+if (saved == null) ta.dataset.sample = "1";
+function updateWC(){
+  const n = (ta.value.trim().match(/\S+/g)||[]).length;
+  $("wc").textContent = n.toLocaleString() + " words" + (ta.dataset.sample ? " · sample notes" : "");
+}
+ta.addEventListener("input", () => { delete ta.dataset.sample; updateWC(); try{localStorage.setItem("qm-material", ta.value)}catch(e){} });
+$("clear").onclick = () => { ta.value=""; files=[]; renderFiles(); delete ta.dataset.sample; asked=[]; updateWC(); try{localStorage.setItem("qm-material","")}catch(e){}; ta.focus(); };
+updateWC();
+
+function rebuildFromFiles(){
+  ta.value = files.map(f => `### ${f.name}\n${f.text.trim()}`).join("\n\n");
+  delete ta.dataset.sample; asked = []; updateWC();
+  try{localStorage.setItem("qm-material", ta.value)}catch(e){}
+}
+function renderFiles(){
+  const box = $("files"); box.innerHTML = "";
+  files.forEach((f,i) => {
+    const c = document.createElement("span"); c.className = "chip";
+    const s = document.createElement("span"); s.textContent = f.name; s.title = f.name;
+    const b = document.createElement("button"); b.setAttribute("aria-label","Remove "+f.name); b.textContent = "×";
+    b.onclick = () => { files.splice(i,1); renderFiles(); rebuildFromFiles(); };
+    c.append(s,b); box.append(c);
+  });
+}
+
+const loaded = {};
+function loadScript(src){
+  if (loaded[src]) return loaded[src];
+  return loaded[src] = new Promise((res,rej) => {
+    const s = document.createElement("script"); s.src = src; s.onload = res; s.onerror = () => rej(new Error("load")); document.head.append(s);
+  });
+}
+async function readPdf(file){
+  const base = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/";
+  await loadScript(base+"pdf.min.js");
+  await loadScript(base+"pdf.worker.min.js"); // runs on the main thread (no separate worker needed)
+  const pdf = await window.pdfjsLib.getDocument({data: await file.arrayBuffer()}).promise;
+  let out = [];
+  for (let p = 1; p <= pdf.numPages; p++){
+    const tc = await (await pdf.getPage(p)).getTextContent();
+    out.push(tc.items.map(it => it.str + (it.hasEOL ? "\n" : " ")).join(""));
+  }
+  return out.join("\n\n");
+}
+async function readDocx(file){
+  await loadScript("https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js");
+  const r = await window.mammoth.extractRawText({arrayBuffer: await file.arrayBuffer()});
+  return r.value;
+}
+async function readFile(file){
+  const n = file.name.toLowerCase();
+  if (n.endsWith(".pdf")) return readPdf(file);
+  if (n.endsWith(".docx")) return readDocx(file);
+  if (n.endsWith(".doc") || n.endsWith(".pptx") || n.endsWith(".ppt")) throw new Error("unsupported");
+  let t = await file.text();
+  if (n.endsWith(".html") || n.endsWith(".htm")) t = new DOMParser().parseFromString(t,"text/html").body.textContent;
+  return t;
+}
+async function addFiles(list){
+  const st = $("status"); st.className = "status";
+  for (const f of list){
+    st.textContent = `Reading ${f.name}…`;
+    try {
+      const text = await readFile(f);
+      if (!text.trim()) throw new Error("empty");
+      files.push({name:f.name, text});
+    } catch(e){
+      st.className = "status err";
+      st.textContent = e.message === "unsupported" ? `${f.name}: save it as PDF or .docx first, then upload again.`
+        : e.message === "empty" ? `${f.name} has no readable text. If it's a scanned PDF, paste the text in instead.`
+        : `Couldn't read ${f.name}. Try another format or paste the text.`;
+      renderFiles(); if (files.length) rebuildFromFiles(); return;
+    }
+  }
+  st.textContent = ""; renderFiles(); rebuildFromFiles();
+}
+const drop = $("drop"), fi = $("file");
+drop.onclick = () => fi.click();
+drop.onkeydown = e => { if (e.key==="Enter"||e.key===" "){ e.preventDefault(); fi.click(); } };
+fi.onchange = () => { addFiles([...fi.files]); fi.value = ""; };
+["dragenter","dragover"].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add("over"); }));
+["dragleave","drop"].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.remove("over"); }));
+drop.addEventListener("drop", e => { if (e.dataTransfer.files.length) addFiles([...e.dataTransfer.files]); });
+
+/* ---------- quiz sheet ---------- */
+const sheet = $("sheet");
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+function renderQuestion(){
+  const q = quiz.questions[idx], n = quiz.questions.length, pick = picks[idx];
+  const answered = pick != null;
+  sheet.innerHTML = `
+    <div class="qhead">
+      <div class="row" style="gap:8px"><span class="label">${esc(quiz.title || "Quiz")}</span>${quiz.example ? '<span class="tag">Example quiz</span>' : ""}</div>
+      <span class="counter">Q ${idx+1} / ${n} · ${picks.filter((p,i)=>p===quiz.questions[i].answer).length} correct</span>
+    </div>
+    <div class="progress"><i style="width:${(idx + (answered?1:0))/n*100}%"></i></div>
+    <p class="qtext">${esc(q.prompt)}</p>
+    <div class="opts">${q.options.map((o,i) => {
+      let cls = "opt";
+      if (answered && i === q.answer) cls += " right";
+      else if (answered && i === pick) cls += " wrong";
+      return `<button class="${cls}" data-i="${i}" ${answered?"disabled":""}><span class="k">${"ABCD"[i]}</span><span class="t">${esc(o)}</span></button>`;
+    }).join("")}</div>
+    ${answered ? `<div class="explain">
+        <div class="verdict ${pick===q.answer?"good":"bad"}">${pick===q.answer ? "Correct." : "Not quite. The answer is " + "ABCD"[q.answer] + "."}</div>
+        <div>${esc(q.explanation)}</div>
+        ${q.source ? `<blockquote>From your notes: “${esc(q.source)}”</blockquote>` : ""}
+      </div>
+      <div class="row"><button class="btn primary" id="next">${idx+1<n ? "Next question" : "See results"}</button><span class="kbd">or press Enter</span></div>`
+      : `<span class="kbd">Press ${q.options.map((_,i)=>i+1).join(" / ")} to answer</span>`}
+    ${quiz.example && idx===0 && !answered ? '<div class="notice">This example quiz comes from the sample notes. Add your own material and click Generate quiz.</div>' : ""}
+  `;
+  sheet.querySelectorAll(".opt").forEach(b => b.onclick = () => choose(+b.dataset.i));
+  const nx = $("next"); if (nx) { nx.onclick = next; nx.focus({preventScroll:true}); }
+}
+function choose(i){ if (picks[idx]!=null) return; picks[idx]=i; renderQuestion(); }
+function next(){ if (idx+1 < quiz.questions.length){ idx++; renderQuestion(); } else renderResults(); }
+
+function renderResults(){
+  const qs = quiz.questions, right = qs.filter((q,i)=>picks[i]===q.answer).length, pct = Math.round(right/qs.length*100);
+  const missed = qs.map((q,i)=>({q,i})).filter(({q,i})=>picks[i]!==q.answer);
+  const msg = pct===100 ? "Perfect score." : pct>=80 ? "Strong. Review the few you missed." : pct>=60 ? "Getting there. Go over the missed ones, then try a new set." : "Worth another pass through your notes before the next set.";
+  sheet.innerHTML = `
+    <div class="qhead"><span class="label">${esc(quiz.title||"Quiz")} · results</span>${quiz.example?'<span class="tag">Example quiz</span>':""}</div>
+    <div class="score"><div class="big">${pct}%</div><div><div style="font-weight:600">${right} of ${qs.length} correct</div><div style="color:var(--muted)">${msg}</div></div></div>
+    <div class="row">
+      <button class="btn primary" id="again">New questions</button>
+      <button class="btn ghost" id="retry">Retake this quiz</button>
+      ${missed.length && missed.length<qs.length ? '<button class="btn ghost" id="redo">Retry missed only</button>' : ""}
+    </div>
+    ${missed.length ? `<div class="label">Review what you missed</div><ul class="review">${missed.map(({q,i})=>`
+      <li><span class="q">${esc(q.prompt)}</span>
+      <span class="y">Your answer: ${esc(q.options[picks[i]])}</span>
+      <span class="a">Correct: ${esc(q.options[q.answer])}</span>
+      <span style="color:var(--muted)">${esc(q.explanation)}</span></li>`).join("")}</ul>` : ""}
+  `;
+  $("again").onclick = generate;
+  $("retry").onclick = () => startQuiz({...quiz, questions: shuffle([...qs])});
+  const rd = $("redo"); if (rd) rd.onclick = () => startQuiz({...quiz, questions: missed.map(m=>m.q)});
+}
+function shuffle(a){ for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]} return a; }
+function startQuiz(q){ quiz=q; idx=0; picks=[]; renderQuestion(); sheet.scrollIntoView({block:"nearest",behavior:"smooth"}); }
+
+document.addEventListener("keydown", e => {
+  if (["TEXTAREA","SELECT","INPUT"].includes(document.activeElement?.tagName)) return;
+  if (!quiz || !quiz.questions[idx] || !sheet.querySelector(".opts")) return;
+  const q = quiz.questions[idx];
+  const k = parseInt(e.key,10);
+  if (k>=1 && k<=q.options.length && picks[idx]==null){ choose(k-1); e.preventDefault(); }
+  else if (e.key==="Enter" && picks[idx]!=null && document.activeElement?.id!=="next"){ next(); e.preventDefault(); }
+});
+
+/* ---------- generation ---------- */
+function showWorking(text){
+  sheet.innerHTML = `<div class="row" style="padding:40px 4px;justify-content:center;gap:12px"><div class="spinner"></div><span id="work">${esc(text)}</span></div>`;
+}
+const ERR = {
+  auth:"Sign-in didn't finish. Click Generate quiz and complete the Puter sign-in window (allow pop-ups if it's blocked).",
+  rate_limited:"Your free Puter allowance is used up for now. Try again later, or pick fewer questions.",
+  prompt_too_large:"That's too much text at once. Remove a file or trim the material.",
+  refused:"Claude couldn't make a quiz from this material. Try different text.",
+  invalid_json:"The quiz came back malformed. Click Generate quiz to try again.",
+  empty_completion:"No questions came back. Try again, or ask for fewer questions."
+};
+
+async function generate(){
+  const st = $("status"); st.className = "status";
+  const text = ta.value.trim();
+  if (text.split(/\s+/).length < 40){ st.className="status err"; st.textContent="Add at least a paragraph or two of material first."; ta.focus(); return; }
+  if (!window.puter?.ai){ st.className="status err"; st.textContent="The AI service didn't load. Check your internet connection, then reload the page."; return; }
+
+  const count = +$("count").value, kind = $("kind").value, level = $("level").value;
+  const LEVELS = {
+    intro: "first-year university level: definitions are not enough, the student must explain mechanisms, compare concepts and apply ideas to simple new cases",
+    upper: "upper-year university level: multi-step reasoning, applying concepts to unfamiliar scenarios, interpreting data or worked examples, and spotting subtle distinctions between closely related ideas",
+    exam: "the hardest questions a demanding university professor would put on a final exam: novel scenarios not stated in the notes, multi-step reasoning or calculation, integrating two or more concepts, predicting what changes if a condition changes, and identifying the one subtly wrong statement. Avoid any question answerable by simple recall or by matching words in the notes"
+  };
+  const kindTxt = kind==="mc" ? "all multiple choice with exactly 4 options" : kind==="tf" ? "all true/false" : "mostly multiple choice (4 options) with roughly a quarter true/false";
+  const MAX = 90000;
+  const material = text.length > MAX ? text.slice(0, MAX) : text;
+  const avoid = asked.slice(-80);
+  const prompt =
+`You are writing a study quiz from a student's material. Write ${count} NEW questions, ${kindTxt}. Difficulty: ${LEVELS[level]}.
+Rules:
+- Base every question strictly on the material below. Cover different parts of it, not just the start.
+- Write like a university examiner. Questions may go beyond the exact wording of the notes, but the correct answer must follow from the material plus standard knowledge of the subject.
+- Distractors must be strong: common misconceptions, partially correct statements, or answers that result from a typical reasoning mistake. A student who only skimmed should find several options tempting. Keep options similar in length and style so the answer isn't obvious. Vary which position holds the correct answer.
+- True/false statements should hinge on a precise detail or a subtle misconception, not an obvious fact.
+- Explanations must say why the correct answer is right AND why the most tempting wrong option is wrong.
+- True/false questions use options ["True","False"].
+- "source" is a short exact excerpt (under 25 words) from the material that the reasoning builds on.
+${avoid.length ? "- Do NOT repeat or closely paraphrase these questions the student has already seen:\n" + avoid.map(q=>"  * "+q).join("\n") : ""}
+
+Reply with only JSON in this shape:
+{"title":"short topic name","questions":[{"type":"mc"|"tf","prompt":"...","options":["..."],"answer":0,"explanation":"one or two sentences","source":"..."}]}
+"answer" is the 0-based index of the correct option.
+
+MATERIAL:
+"""
+${material}
+"""`;
+
+  const myRun = ++runId; ctl = { abort(){ runId++; } };
+  $("gen").disabled = true; $("stop").hidden = false;
+  showWorking("Reading your material…");
+  if (text.length > MAX) st.textContent = "Your material is long, so only the first part was used.";
+  try {
+    const data = await askClaude(prompt, count);
+    if (myRun !== runId) throw {code:"cancelled"};
+    const qs = (data?.questions||[]).filter(q => q && q.prompt && Array.isArray(q.options) && q.options.length>=2 && Number.isInteger(+q.answer) && +q.answer < q.options.length)
+      .map(q => ({...q, answer:+q.answer, options:q.options.slice(0,4).map(String)}));
+    if (!qs.length) throw {code:"empty_completion"};
+    asked.push(...qs.map(q=>q.prompt));
+    startQuiz({title: data.title || "Your quiz", questions: qs});
+  } catch(e){
+    if (e?.code === "cancelled"){ st.textContent = "Stopped."; }
+    else { st.className="status err"; st.textContent = ERR[e?.code] || "Couldn't reach the AI service. Check your connection and try again."; }
+    if (myRun !== runId) return;
+    if (quiz) renderQuestion();
+  } finally {
+    if (myRun === runId) { $("gen").disabled = false; $("stop").hidden = true; ctl = null; }
+  }
+}
+$("gen").onclick = generate;
+$("stop").onclick = () => { ctl?.abort(); ctl = null; $("gen").disabled = false; $("stop").hidden = true; $("status").className = "status"; $("status").textContent = "Stopped."; if (quiz) renderQuestion(); };
+
+renderQuestion();
+})();
+</script>
+
+</body></html>
